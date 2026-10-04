@@ -25,7 +25,6 @@ using namespace std;
 enum AppStatus { TERMINATED, RUNNING };
 enum KrackoTypes {ONE, TWO, THREE, FOUR, FIVE};
 enum KirbyFly {UP, DOWN};
-//enum Direction {TOP, BOTTOM};
 
 // Global Constants
 constexpr int SCREEN_WIDTH  = 800 * 1.5f,
@@ -35,12 +34,13 @@ constexpr int SCREEN_WIDTH  = 800 * 1.5f,
               OFFSET_FROM_BORDER= 100,
               KRACKO_FRAME_LIMIT = 500.0f,
               KIRBY_FLY_FRAME_LIMIT = 400.0f,
+              COLOR_FRAME_LIMIT = 10000.0f,
               LIMIT_KRACKO_ANGLE = 20.0f;
 constexpr Vector2 ORIGIN      = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
 constexpr Vector2 BASE_SIZE   = { static_cast<float>(SIZE), static_cast<float>(SIZE) };
 constexpr Vector2 BOTTOM_LEFT = {0.0f, SCREEN_HEIGHT };
 constexpr Vector2 TOP_RIGHT = { SCREEN_WIDTH, 0.0f };
-
+constexpr Vector2 TOP_LEFT = {0.0f, 0.0f};
 
 // images found from spriters-resource.com - all characters from Kirby games (don't sue me please)
 //constexpr char KIRBY_STANDING[] = "assets/kirby_standing.png";
@@ -64,13 +64,14 @@ Vector2 gPositionKrackoCircular = TOP_RIGHT;
 Vector2 gPositionStar = ORIGIN;
 Vector2 gPositionExplosion = ORIGIN;
 Vector2 gScaleExplosion = BASE_SIZE;
-
+Vector2 gPositionBackgroundLight = TOP_LEFT;
+Vector2 gPositionBackgroundDark = TOP_RIGHT;
 //Direction gDirection = BOTTOM;
 
 float gPreviousTicks = 0.0f;
 int krackoFrames = 0;
 int kirbyFlyFrames = 0;
-
+int colorFrames = 0;
 //bool isKirbyWalk = true;
 //bool isKirbyFly = false;
 bool isKrackoCircular = false;
@@ -89,7 +90,7 @@ Texture2D gExplosionTexture;
 
 KrackoTypes kracko;
 KirbyFly kirbyFly;
-
+Color backgroundTint = WHITE;
 // Function Declarations
 void initialize();
 void processInpit();
@@ -117,6 +118,14 @@ void update() {
     float ticks = GetTime();
     float deltaTime = ticks - gPreviousTicks;
     gPreviousTicks = ticks;
+
+    colorFrames++;
+    if (colorFrames > COLOR_FRAME_LIMIT) {
+        backgroundTint = DARKGRAY;
+        if (colorFrames > COLOR_FRAME_LIMIT * 2.0f) colorFrames = 0;
+    }else {
+        backgroundTint = LIGHTGRAY;
+    }
 
     if (gPositionKracko.y < SCREEN_HEIGHT / 2.0f - 150.0f) {
         gPositionKracko.y += 50.0f*deltaTime;
@@ -191,14 +200,13 @@ void update() {
     if (isKillTime) {
         if (gScaleExplosion.x < 500.0f) {
             gScaleExplosion.x += 0.10f;
-            gPositionExplosion.x -= 40.0f * deltaTime;
+            gPositionExplosion.x -= 60.0f * deltaTime;
         }
 
 
         if (gScaleExplosion.y < 500.0f) {
             gScaleExplosion.y += 0.10f;
-            gPositionExplosion.y -= 40.0f *deltaTime;
-
+            gPositionExplosion.y -= 45.0f *deltaTime;
         }
     }
 
@@ -240,7 +248,9 @@ void render() {
         0.0f, 0.0f,
         gScale.x*15.0f, gScale.y*7.0f
     };
-    DrawTexturePro(gBackgroundTexture, textureAreaBackground, destinationAreaBackground, objectOrigin, gAngle, WHITE);
+
+    DrawTexturePro(gBackgroundTexture, textureAreaBackground, destinationAreaBackground, objectOrigin, gAngle, backgroundTint);
+   // DrawTexturePro(gBackgroundTexture, textureAreaBackground, destinationAreaBackgroundDark, objectOrigin, gAngle, DARKGRAY);
     // if (isKirbyWalk){
     //     Rectangle textureAreaKirby = {
     //         0.0f, 0.0f,
