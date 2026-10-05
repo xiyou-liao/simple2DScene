@@ -1,7 +1,7 @@
 /**
 
 * Author: Ren Liao
-* Assignment: Pong Clone
+* Assignment: simple 2D Animation
 * Date due: [10/05/2026]
 * I pledge that I have completed this assignment without
 * collaborating with anyone else, in conformance with the
@@ -25,11 +25,12 @@ constexpr int SCREEN_WIDTH  = 800 * 1.5f,
               SCREEN_HEIGHT = 450 * 1.5f,
               FPS           = 60,
               SIZE          = 100,
-              OFFSET_FROM_BORDER= 100,
+              OFFSET_FROM_BORDER = 100,
               KRACKO_FRAME_LIMIT = 500.0f,
               KIRBY_FLY_FRAME_LIMIT = 400.0f,
               COLOR_FRAME_LIMIT = 10000.0f,
               LIMIT_KRACKO_ANGLE = 20.0f;
+
 constexpr Vector2 ORIGIN      = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
 constexpr Vector2 BASE_SIZE   = { static_cast<float>(SIZE), static_cast<float>(SIZE) };
 constexpr Vector2 BOTTOM_LEFT = {0.0f, SCREEN_HEIGHT };
@@ -61,6 +62,9 @@ Vector2 gPositionBackgroundDark = TOP_RIGHT;
 
 float gPreviousTicks = 0.0f;
 float gOrbitAngle = 0.0f;
+float gSpeed = 1000.0f;
+float gScaleSpeed = 500.0f;
+float gOrbitSpeed = 1000.0f;
 int krackoFrames = 0;
 int kirbyFlyFrames = 0;
 int colorFrames = 0;
@@ -102,7 +106,7 @@ void processInput() {
 }
 
 void update() {
-    float ticks = GetTime();
+    float ticks = static_cast<float>(GetTime());
     float deltaTime = ticks - gPreviousTicks;
     gPreviousTicks = ticks;
 
@@ -114,21 +118,22 @@ void update() {
     }else {
         backgroundTint = LIGHTGRAY;
     }
+
     //moves kracko diagonally at the beginning of the animation
     if (gPositionKracko.y < SCREEN_HEIGHT / 2.0f - 150.0f) {
-        gPositionKracko.y += 50.0f*deltaTime;
+        gPositionKracko.y += 0.03f * gSpeed * deltaTime;
     }
-    if (gPositionKracko.x > SCREEN_WIDTH / 2.0f + 100.0f) gPositionKracko.x -= 80.0f*deltaTime;
+    if (gPositionKracko.x > SCREEN_WIDTH / 2.0f + 100.0f) gPositionKracko.x -= 0.08f * gSpeed *deltaTime;
     else {
          if (!isKrackoCircular) { //changes Kracko to move circularly
              isKrackoCircular = true;
              gPositionKrackoCircular = gPositionKracko;
          }
-
    }
+
     //make Kirby fly up diagonally
-    if (gPositionKirbyFly.y > 2 * OFFSET_FROM_BORDER) gPositionKirbyFly.y -= 80.0f * deltaTime;
-    if (gPositionKirbyFly.x < SCREEN_WIDTH / 2.0f - 150.0) gPositionKirbyFly.x += 80.0f * deltaTime;
+    if (gPositionKirbyFly.y > 2 * OFFSET_FROM_BORDER) gPositionKirbyFly.y -= 0.08f * gSpeed * deltaTime;
+    if (gPositionKirbyFly.x < SCREEN_WIDTH / 2.0f - 150.0) gPositionKirbyFly.x += 0.08f * gSpeed * deltaTime;
     else {
         if (!isFightTime) { //once Kirby is in place, commence fight
             isFightTime = true;
@@ -147,14 +152,14 @@ void update() {
         kirbyFlyFrames = 0;
     }
 
-    gAngleStar = fmod(gAngleStar + 0.05f, 360.0f); //changes the star's angle so it rotates
+    gAngleStar = fmod(gAngleStar + 0.05f * gOrbitSpeed * deltaTime, 360.0f); //changes the star's angle so it rotates
 
     if (!isFightTime) {
         gPositionStar = gPositionKirbyFly; //star will follow kirby while he flies until it is fight time
     }
     else if (isFightTime) {
         if (!isKillTime) { //while fighting, but not yet kill time, move the star towards Kracko
-            gPositionStar.x+=0.05f;
+            gPositionStar.x += 0.05f * gSpeed * deltaTime;
 
             if (gPositionStar.x >= gPositionKracko.x + 100.0f) {
                 isKillTime = true;
@@ -163,24 +168,25 @@ void update() {
             }
         }
     }
-    if (isKillTime) { //kill time! (yay) make explosion grow
+
+    if (isKillTime) { //kill time! (yay) make explosion grow and defeat the evil Kracko
         if (gScaleExplosion.x < 600.0f) {
-            gScaleExplosion.x += 0.10f;
-            gPositionExplosion.x -= 0.06f;
+            gScaleExplosion.x += 0.10f * gScaleSpeed * deltaTime;
+            gPositionExplosion.x -= 0.06f * gScaleSpeed * deltaTime;
         }
 
         if (gScaleExplosion.y < 600.0f) {
-            gScaleExplosion.y += 0.10f;
-            gPositionExplosion.y -= 0.045f;
+            gScaleExplosion.y += 0.10f * gScaleSpeed * deltaTime;
+            gPositionExplosion.y -= 0.045f * gScaleSpeed * deltaTime;
         }
     }
 
     if (isKrackoCircular) { //kracko moves in orbit motion
-        gOrbitAngle = fmod((gOrbitAngle + 0.001f), 360.0f);
+        gOrbitAngle = fmod((gOrbitAngle + 0.001f * gOrbitSpeed * deltaTime), 360.0f);
         float radius = 25.0f;
         gPositionKracko = {
-            cosf(gOrbitAngle)*radius + gPositionKrackoCircular.x,
-            sinf(gOrbitAngle)*radius + gPositionKrackoCircular.y
+            cosf(gOrbitAngle) * radius + gPositionKrackoCircular.x,
+            sinf(gOrbitAngle) * radius + gPositionKrackoCircular.y
         };
     }
 
@@ -200,7 +206,9 @@ void render() {
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
-    Vector2 objectOrigin = {gScale.x / 2.0f, gScale.y / 2.0f}; //makes the object's origin at it's origin
+    //makes the object's origin at its origin
+    Vector2 objectOrigin = {gScale.x / 2.0f, gScale.y / 2.0f};
+
     //background drawing
     Rectangle textureAreaBackground = {
         0.0f, 0.0f,
@@ -212,12 +220,13 @@ void render() {
         gScale.x*15.0f, gScale.y*7.0f
     };
 
-    DrawTexturePro(gBackgroundTexture, textureAreaBackground, destinationAreaBackground, objectOrigin, gAngle, backgroundTint);
+    DrawTexturePro(gBackgroundTexture, textureAreaBackground,
+        destinationAreaBackground, objectOrigin, gAngle, backgroundTint);
 
     //kracko drawing
     float krackoX = 0.0f, krackoY = 0.0f,
             krackoWidth = static_cast<float>(gKrackoTexture.width) / 5.0f,
-            krackoOffset = 13.0f;
+            krackoOffset = 10.0f;
     if(kracko == ONE){
         krackoX = 0.0f + krackoOffset;
     }else if(kracko == TWO){
@@ -276,25 +285,33 @@ void render() {
        gPositionStar.x, gPositionStar.y,
         gScale.x, gScale.y
     };
-    DrawTexturePro(gStarTexture, textureAreaStar, destinationAreaStar, objectOrigin, gAngleStar, WHITE);
+    DrawTexturePro(gStarTexture, textureAreaStar,
+        destinationAreaStar, objectOrigin, gAngleStar, WHITE);
 
     if (isKillTime) {
         //draw explosion
         Rectangle textureAreaExplosion = {
             0.0f, 0.0f,
-            static_cast<float>(gExplosionTexture.width), static_cast<float>(gExplosionTexture.height)
+            static_cast<float>(gExplosionTexture.width),
+            static_cast<float>(gExplosionTexture.height)
         };
         Rectangle destinationAreaExplosion = {
             gPositionExplosion.x, gPositionExplosion.y,
             gScaleExplosion.x, gScaleExplosion.y
         };
-        DrawTexturePro(gExplosionTexture, textureAreaExplosion, destinationAreaExplosion, objectOrigin, gAngle, WHITE);
+        DrawTexturePro(gExplosionTexture, textureAreaExplosion,
+            destinationAreaExplosion, objectOrigin, gAngle, WHITE);
     }
 
     EndDrawing();
 }
 
 void shutdown() {
+    UnloadTexture(gKirbyFlyTexture);
+    UnloadTexture(gStarTexture);
+    UnloadTexture(gBackgroundTexture);
+    UnloadTexture(gKrackoTexture);
+    UnloadTexture(gExplosionTexture);
     CloseWindow();
 }
 
